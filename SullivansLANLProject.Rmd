@@ -1,0 +1,131 @@
+---
+title: "LLNL Data Analysis"
+author: "Robert Sullivan"
+date: "February 25, 2016"
+output: html_document
+---
+#Introduction
+This analysis was built for my professional portfolio.
+I will use the dataset released by the Los Alamos National Labaratory [4] to demonstrate my Security Data Science approach and tools.
+
+I will use R and other tools to show skills in:
+* Math & Statistics
+I will use statistical modeling and supervised machine learning to attempt to reveal insights into the data. If I get really stuck I'll use unserpervised learning to group some of the data.
+
+* Domain Knowledge & Soft Skills
+I will demonstrate curiosity and a malicious mindset to demonstrate unique and broad approach that enables me to contribute to most any team immediately and develop more specialized skills as the team's needs emerge. I'll do this without breaking the rules of my employer or certifying organizations.
+
+* Programming and Database
+I will use R and some database. Given limited time available I plan to  generate models and filter data so I can quickly iterate through some hypothesis and share the results in a simply repeatable form. When an promising, efficient model is built it will be time to scale up the solution.
+
+* Communication and Visualization
+This project will make the data, theories and models very visible. Ideally, this project will present LANL with some urgent recommendations to disable user accounts and a model to deploy for future malicious actor detection. Ideally, this will also provide the researcher a platform for investigating the LANL data without the time consuming setup filtering.
+
+#Foray 1:
+Given Red team behavior, classify all users as Red team or Normal.
+Here is the plan:
+
+1. Take the Red Team user names from redteam.txt.
+2. Build a training set from auth.txt
+3. Add the behavior we get in redteam.txt including snowballing, edgy activity and speed
+Snowballing is leveraging the identity of users currently logged in to the first compromised machine to compromise additional machines. [1]
+
+Speed is the time between login attempts. Let's guess they are using automated tools and may be fast. 
+In pre-processing we'll 
+* calculate snowballing, 
+* edgy behavior[2] and 
+* speed for each user, then 
+* add that to every event. 
+
+We will use the largest baseline available [3] of 47 days. 
+*Edges that appear in days 48-58 will be flagged as new.
+*We will drop the logoff events along with AuthMap events. They are always successful.
+
+How many user profiles do we want to build?
+
+**Full set:**  
+
+Red Team    |   104  
+Normal Team | 80449  
+
+**First Foray:** 
+
+Red Team    | 104  
+Normal Team | 312  
+
+This is based on the generalization that one of four users are malicious and we'll learn enough with the small set to speed up the next round.
+
+#Splitting Training and Testing
+The trainig and testing data was split 80% training and 20% for testing.
+
+
+#Input File Format
+user, team(red/normal), successCount(pct), failCount(pct), speed (pct of subsec transactions), snowballrate, edgerate
+
+#Load and Preprocess Data
+```{r}
+library(caret)
+library(randomForest)
+library(adabag)
+training <- read.csv("lanl-training.csv", header = TRUE)
+testing <- read.csv("lanl-testing.csv", header = TRUE)
+
+trimTrain <- training[,2:6]
+trimTrain$team <- factor(trimTrain$team)
+trimTest <- testing[,2:6]
+trimTest$team <- factor(trimTest$team)
+
+preObj <- preProcess(trimTrain)
+
+set.seed(2222)
+trainPC <- predict(preObj, trimTrain)
+```
+
+#Review Predictor Variables
+Two views will allow us to review the input data. 
+A table and a two plots.
+
+```{r}
+summary(trainPC)
+boxplot(trainPC[,1:5], main="Boxplot Predictor Values")
+pairs(team ~.,data=trimTrain, main="Scatterplot of Predictors")
+```
+The summary shows that all of the predictors have robust data. 
+The plot shows that pctsuccess and pctfail are inverse of one another.
+We can drop one of those predictors in a future run without losing any prediction strength.
+
+#Create a Random Forest to predict team
+```{r}
+modFitRf <- train( training$team ~., method = "rf", data=trainPC, na.action = na.omit)
+
+testPC <- predict(preObj, trimTest)
+testResult <- predict(modFitRf, testPC)
+
+```
+
+#Review Model and Test Results
+Here is the accuracy of the model and the testing results.
+```{r}
+print(modFitRf)
+confusionMatrix(testResult, testPC$team)
+```
+This shows the model achieved 76% accuracy. 
+The results show 79% correct.
+This model was built in under 60 seconds on a modern Intel machine with 16GB of memory.
+Here are some good items to use to follow-up:
+
+1. What about the "normal" team members flagged as "red" team? Are they really legit, or are they malicious users (behaving like Red Team members)?
+2. What is with the Red Team members getting flagged as Normal Team. Are they extrea stealthy or maybe just took the last 10 days of the period off, giving them a low edge score.
+3. Scale the data up to handle all 80,000+ Normal Team users.
+4. Add the "snowball identity attack" predictor to the user's profile.
+5. Drop the 'pctfails' predictor as it is covered by 'pctsuccess'.
+
+
+#References:
+[1]Heat-ray: Combating Identity Snowball Attacks Using Machine LEarning, Combinatorial Optimization and Attack Graphs. John Dunagan, Alice X. Zhang, Daniel R. Simon. SOSP, page 305-320. ACM, (2009)
+
+[2] Using new edges for anomaly detection in computer networks, Joshua C. Neil.  U.S. Patent 9,038,180 B2. May 2015.
+
+[3] Common Sense Guide to Mitigating Insider Threats, 4th Edition December 2012. By George Silowash, Dawn Cappelli, Andrew P. Moore, Randall F. Trzeciak, Timothy J. Shimeall, Lori Flynn.
+
+[4] A. D. Kent, "Cybersecurity Data Sources for Dynamic Network Research," in Dynamic Networks in Cybersecurity, 2015.
