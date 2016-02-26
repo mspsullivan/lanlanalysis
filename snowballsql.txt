@@ -1,0 +1,48 @@
+;Move File
+sudo -u hdfs hadoop fs -mkdir /user/hive/warehouse/authlog_original
+sudo -u hdfs hadoop fs -copyFromLocal /opt/lanl/authsample.txt /user/hive/warehouse/authlog_original
+
+;List File
+hadoop fs -ls /user/hive/warehouse/auth
+
+; ingest file and create table
+CREATE EXTERNAL TABLE intermediate_auth (
+    time STRING,
+    source_user STRING,
+    dest_user STRING,
+    source STRING,
+    dest STRING,
+    auth_type STRING,
+    login_type STRING,
+    orientation STRING,
+    success_failure STRING)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
+LOCATION '/user/hive/warehouse/auth';
+
+CREATE EXTERNAL TABLE tokenized_auth (
+    time STRING,
+    source_user STRING,
+    dest_user STRING,
+    source STRING,
+    dest STRING,
+    auth_type STRING,
+    login_type STRING,
+    orientation STRING,
+    success_failure STRING)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
+LOCATION '/user/hive/warehouse/auth_tokenized';
+
+ADD JAR /opt/cloudera/parcels/CDH/lib/hive/lib/hive-contrib.jar;
+
+INSERT OVERWRITE TABLE tokenized_auth SELECT * FROM intermediate_auth;
+
+; count the snowball flags for each user
+select count(*),source_user from tokenized_auth
+where source_user <> dest_user
+group by source_user
+order by source_user;
+
+;Reset:
+DROP TABLE tokenized_auth;
+DROP TABLE intermediate_auth;
+
