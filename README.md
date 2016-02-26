@@ -15,7 +15,7 @@ A forecasting model documented in HTML, R Markdown files and PNG files [HTML Pro
 Two .java and one .bat file that were used for preprocessing are posted in the [git repository](https://github.com/mspsullivan/lanlanalysis/).
 
 # Second Foray
-A hadoop-constructed input file [snowballcounts.csv] (https://github.com/mspsullivan/lanlanalysis/blob/master/snowballcounts.csv) and screen shots [Cloudera Manager](https://github.com/mspsullivan/lanlanalysis/blob/master/SnowballinputHue.png) and [Hue](https://github.com/mspsullivan/lanlanalysis/blob/master/SnowballinputHue.png) that computes the "snowball" rating for each user. The HIVE SQL is posted in the [Snowball SQL](https://github.com/mspsullivan/lanlanalysis/blob/master/snowballsql.txt) The screen shots show a 4-cluster Hadoop system using Cloudera, Hive and Hue to compute a new predictor on the full auth.txt log file, 71GB when expanded.
+This includes a hadoop-constructed input file [snowballcounts.csv] (https://github.com/mspsullivan/lanlanalysis/blob/master/snowballcounts.csv) and screen shots [Cloudera Manager](https://github.com/mspsullivan/lanlanalysis/blob/master/SnowballinputHue.png) and [Hue](https://github.com/mspsullivan/lanlanalysis/blob/master/SnowballinputHue.png). In this foray I computed the "snowball" rating for each user. The HIVE SQL is posted in the [Snowball SQL](https://github.com/mspsullivan/lanlanalysis/blob/master/snowballsql.txt) The screen shots show a 4-cluster Hadoop system using Cloudera, Hive and Hue to compute the snowball identity attack predictor on the full auth.txt log file, 71GB when expanded.
 The results from the "second foray" could be used to improve the model and results from foray 1.
 
 # Third Foray
